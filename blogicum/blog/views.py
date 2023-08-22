@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.http import Http404
+from django.core.cache import cache
 
 posts = [
     {
@@ -53,12 +54,16 @@ def index(request):
 
 def post_detail(request, id):
     template = 'blog/detail.html'
-    global post_dict
-    post_dict = {post['id']: post for post in posts}
-    post = post_dict.get(id)
+    id_to_post = {post['id']: post for post in posts}
+    post = id_to_post.get(id)
     if post is None:
-        raise Http404(f"Пост с id {id} не найден")
-    context = {'post': post}
+        raise Http404(f'Пост с id {id} не найден')
+    cache_key = f'post_{id}'
+    cached_post = cache.get(cache_key)
+    if cached_post is None:
+        cache.set(cache_key, post)
+        cached_post = post
+    context = {'post': cached_post}
     return render(request, template, context)
 
 
